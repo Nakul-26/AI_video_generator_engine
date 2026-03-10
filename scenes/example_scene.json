@@ -1,0 +1,68 @@
+{
+  "fps": 30,
+  "width": 1280,
+  "height": 720,
+  "scenes": [
+    {
+      "duration": 3,
+      "objects": [
+        {
+          "name": "title_group",
+          "x": 200,
+          "y": 120,
+          "children": [
+            {
+              "name": "welcome_text",
+              "type": "text",
+              "value": "Welcome to AI Video Engine",
+              "x": 60,
+              "y": 80,
+              "font_scale": 1.2,
+              "layer": 10
+            },
+            {
+              "name": "title_marker",
+              "type": "rectangle",
+              "x": 0,
+              "y": 30,
+              "width": 30,
+              "height": 80,
+              "color": [0, 180, 255],
+              "layer": 5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "duration": 3,
+      "objects": [
+        {
+          "name": "diagram_group",
+          "x": 520,
+          "y": 260,
+          "children": [
+            {
+              "name": "main_circle",
+              "type": "circle",
+              "x": 80,
+              "y": 90,
+              "radius": 80,
+              "color": [0, 255, 0],
+              "layer": 5
+            },
+            {
+              "name": "label",
+              "type": "text",
+              "value": "Scene Graph Ready",
+              "x": -10,
+              "y": 230,
+              "font_scale": 1.0,
+              "layer": 10
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

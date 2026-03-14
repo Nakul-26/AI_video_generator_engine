@@ -9,6 +9,7 @@ import cv2
 from core.renderer import Renderer
 from core.scene_graph import SceneGraph
 from core.scene_node import SceneNode
+from core.timeline_engine import TimelineEngine
 
 
 class SceneEngine:
@@ -38,8 +39,11 @@ class SceneEngine:
             for scene in self.data["scenes"]:
                 frame_count = int(float(scene["duration"]) * self.fps)
                 scene_graph = self.build_graph(scene.get("objects", []))
+                timeline = TimelineEngine(scene_graph, scene.get("animations", []))
                 nodes = scene_graph.traverse()
-                for _ in range(frame_count):
+                for frame_index in range(frame_count):
+                    current_time = frame_index / self.fps
+                    timeline.evaluate(current_time)
                     frame = self.renderer.render_scene(nodes)
                     video.write(frame)
         finally:

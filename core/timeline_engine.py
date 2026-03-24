@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from core.easing import EASING_FUNCTIONS
 from core.scene_graph import SceneGraph
 
 
@@ -14,6 +15,7 @@ class AnimationTrack:
     end_time: float
     start_value: float | list[float]
     end_value: float | list[float]
+    easing_name: str
 
     def value_at(self, current_time: float) -> float | list[float] | None:
         if current_time < self.start_time:
@@ -27,7 +29,9 @@ class AnimationTrack:
             return self.end_value
 
         progress = (current_time - self.start_time) / duration
-        return interpolate_value(self.start_value, self.end_value, progress)
+        clamped_progress = min(1.0, max(0.0, progress))
+        eased_progress = EASING_FUNCTIONS[self.easing_name](clamped_progress)
+        return interpolate_value(self.start_value, self.end_value, eased_progress)
 
 
 class TimelineEngine:
@@ -53,11 +57,15 @@ class TimelineEngine:
         property_name = str(animation["property"])
         start_time = float(animation.get("start_time", 0.0))
         end_time = float(animation["end_time"])
+        easing_name = str(animation.get("easing", "linear"))
 
         if end_time < start_time:
             raise ValueError(
                 f"Animation for '{node_name}' property '{property_name}' has end_time before start_time"
             )
+
+        if easing_name not in EASING_FUNCTIONS:
+            raise ValueError(f"Invalid easing type: {easing_name}")
 
         return AnimationTrack(
             node_name=node_name,
@@ -66,6 +74,7 @@ class TimelineEngine:
             end_time=end_time,
             start_value=normalize_value(animation["from"]),
             end_value=normalize_value(animation["to"]),
+            easing_name=easing_name,
         )
 
 
@@ -84,18 +93,16 @@ def interpolate_value(
     end_value: float | list[float],
     progress: float,
 ) -> float | list[float]:
-    clamped_progress = min(1.0, max(0.0, progress))
-
     if isinstance(start_value, list) and isinstance(end_value, list):
         if len(start_value) != len(end_value):
             raise ValueError("Animated list values must have matching lengths")
 
         return [
-            start_item + (end_item - start_item) * clamped_progress
+            start_item + (end_item - start_item) * progress
             for start_item, end_item in zip(start_value, end_value)
         ]
 
     if isinstance(start_value, float) and isinstance(end_value, float):
-        return start_value + (end_value - start_value) * clamped_progress
+        return start_value + (end_value - start_value) * progress
 
     raise TypeError("Animated start/end values must both be floats or both be float lists")

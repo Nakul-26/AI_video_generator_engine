@@ -49,6 +49,7 @@
           "property": "opacity",
           "start_time": 0,
           "end_time": 1.5,
+          "delay": 0.2,
           "from": 0,
           "to": 1,
           "easing": "ease_in"
@@ -101,6 +102,7 @@
           "property": "position",
           "start_time": 0,
           "end_time": 4,
+          "delay": 0.5,
           "from": [0, 90],
           "to": [240, 90],
           "easing": "ease_out"
@@ -110,6 +112,7 @@
           "property": "rotation",
           "start_time": 0,
           "end_time": 4,
+          "delay": 1.1,
           "from": 0,
           "to": 360,
           "easing": "ease_in_out"
@@ -117,8 +120,9 @@
         {
           "node": "label",
           "property": "opacity",
-          "start_time": 1,
-          "end_time": 2.5,
+          "start_time": 0,
+          "end_time": 1.5,
+          "delay": 1.8,
           "from": 0,
           "to": 1,
           "easing": "ease_in"

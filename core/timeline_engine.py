@@ -13,22 +13,26 @@ class AnimationTrack:
     property_name: str
     start_time: float
     end_time: float
+    delay: float
     start_value: float | list[float]
     end_value: float | list[float]
     easing_name: str
 
     def value_at(self, current_time: float) -> float | list[float] | None:
-        if current_time < self.start_time:
+        effective_start_time = self.start_time + self.delay
+        effective_end_time = self.end_time + self.delay
+
+        if current_time < effective_start_time:
             return None
 
-        if current_time >= self.end_time:
+        if current_time >= effective_end_time:
             return self.end_value
 
-        duration = self.end_time - self.start_time
+        duration = effective_end_time - effective_start_time
         if duration <= 0:
             return self.end_value
 
-        progress = (current_time - self.start_time) / duration
+        progress = (current_time - effective_start_time) / duration
         clamped_progress = min(1.0, max(0.0, progress))
         eased_progress = EASING_FUNCTIONS[self.easing_name](clamped_progress)
         return interpolate_value(self.start_value, self.end_value, eased_progress)
@@ -57,11 +61,17 @@ class TimelineEngine:
         property_name = str(animation["property"])
         start_time = float(animation.get("start_time", 0.0))
         end_time = float(animation["end_time"])
+        delay = float(animation.get("delay", 0.0))
         easing_name = str(animation.get("easing", "linear"))
 
         if end_time < start_time:
             raise ValueError(
                 f"Animation for '{node_name}' property '{property_name}' has end_time before start_time"
+            )
+
+        if delay < 0:
+            raise ValueError(
+                f"Animation for '{node_name}' property '{property_name}' has a negative delay"
             )
 
         if easing_name not in EASING_FUNCTIONS:
@@ -72,6 +82,7 @@ class TimelineEngine:
             property_name=property_name,
             start_time=start_time,
             end_time=end_time,
+            delay=delay,
             start_value=normalize_value(animation["from"]),
             end_value=normalize_value(animation["to"]),
             easing_name=easing_name,

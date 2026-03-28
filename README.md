@@ -12,6 +12,7 @@ A small Python-based scene engine that renders JSON-defined scenes into an MP4 v
 - Timeline-based animation tracks with linear interpolation
 - Built-in easing modes for smoother animation timing
 - Per-track animation delay for simple staggered sequencing
+- Per-track animation looping for continuous motion
 - Supported animated properties:
   - `position`
   - `scale`
@@ -124,6 +125,7 @@ Each animation track includes:
 - `from`: starting value
 - `to`: ending value
 - `easing`: optional timing function, defaults to `linear`
+- `loop`: optional boolean, defaults to `false`; when `true`, repeats indefinitely after the effective start time
 
 ## Example Capabilities
 
@@ -133,6 +135,7 @@ The sample scene currently demonstrates:
 - text fade-in using eased opacity animation
 - delayed circle position animation with easing
 - delayed rectangle rotation animation with easing
+- looped animation tracks for continuous motion
 - multi-scene sequencing in one output video
 
 ## Current Limitations

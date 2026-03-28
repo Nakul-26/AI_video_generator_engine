@@ -17,6 +17,7 @@ class AnimationTrack:
     start_value: float | list[float]
     end_value: float | list[float]
     easing_name: str
+    loop: bool
 
     def value_at(self, current_time: float) -> float | list[float] | None:
         effective_start_time = self.start_time + self.delay
@@ -25,14 +26,18 @@ class AnimationTrack:
         if current_time < effective_start_time:
             return None
 
-        if current_time >= effective_end_time:
-            return self.end_value
-
         duration = effective_end_time - effective_start_time
         if duration <= 0:
             return self.end_value
 
-        progress = (current_time - effective_start_time) / duration
+        if self.loop:
+            progress = ((current_time - effective_start_time) % duration) / duration
+        else:
+            if current_time >= effective_end_time:
+                return self.end_value
+
+            progress = (current_time - effective_start_time) / duration
+
         clamped_progress = min(1.0, max(0.0, progress))
         eased_progress = EASING_FUNCTIONS[self.easing_name](clamped_progress)
         return interpolate_value(self.start_value, self.end_value, eased_progress)
@@ -63,6 +68,7 @@ class TimelineEngine:
         end_time = float(animation["end_time"])
         delay = float(animation.get("delay", 0.0))
         easing_name = str(animation.get("easing", "linear"))
+        loop = bool(animation.get("loop", False))
 
         if end_time < start_time:
             raise ValueError(
@@ -86,6 +92,7 @@ class TimelineEngine:
             start_value=normalize_value(animation["from"]),
             end_value=normalize_value(animation["to"]),
             easing_name=easing_name,
+            loop=loop,
         )
 
 

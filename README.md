@@ -13,6 +13,7 @@ A small Python-based scene engine that renders JSON-defined scenes into an MP4 v
 - Built-in easing modes for smoother animation timing
 - Per-track animation delay for simple staggered sequencing
 - Per-track animation looping for continuous motion
+- Per-track repeat counts for bounded loop-style motion
 - Supported animated properties:
   - `position`
   - `scale`
@@ -126,6 +127,7 @@ Each animation track includes:
 - `to`: ending value
 - `easing`: optional timing function, defaults to `linear`
 - `loop`: optional boolean, defaults to `false`; when `true`, repeats indefinitely after the effective start time
+- `repeat`: optional integer, defaults to `1`; replays the animation for a fixed number of cycles before holding the final value
 
 ## Example Capabilities
 
@@ -136,6 +138,7 @@ The sample scene currently demonstrates:
 - delayed circle position animation with easing
 - delayed rectangle rotation animation with easing
 - looped animation tracks for continuous motion
+- repeated animation tracks for shake, pulse, and bounce-style motion
 - multi-scene sequencing in one output video
 
 ## Current Limitations

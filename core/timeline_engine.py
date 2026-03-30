@@ -18,6 +18,7 @@ class AnimationTrack:
     end_value: float | list[float]
     easing_name: str
     loop: bool
+    repeat: int
 
     def value_at(self, current_time: float) -> float | list[float] | None:
         effective_start_time = self.start_time + self.delay
@@ -33,10 +34,13 @@ class AnimationTrack:
         if self.loop:
             progress = ((current_time - effective_start_time) % duration) / duration
         else:
-            if current_time >= effective_end_time:
+            total_duration = duration * self.repeat
+            final_end_time = effective_start_time + total_duration
+
+            if current_time >= final_end_time:
                 return self.end_value
 
-            progress = (current_time - effective_start_time) / duration
+            progress = ((current_time - effective_start_time) % duration) / duration
 
         clamped_progress = min(1.0, max(0.0, progress))
         eased_progress = EASING_FUNCTIONS[self.easing_name](clamped_progress)
@@ -69,6 +73,7 @@ class TimelineEngine:
         delay = float(animation.get("delay", 0.0))
         easing_name = str(animation.get("easing", "linear"))
         loop = bool(animation.get("loop", False))
+        repeat = int(animation.get("repeat", 1))
 
         if end_time < start_time:
             raise ValueError(
@@ -83,6 +88,11 @@ class TimelineEngine:
         if easing_name not in EASING_FUNCTIONS:
             raise ValueError(f"Invalid easing type: {easing_name}")
 
+        if repeat < 1:
+            raise ValueError(
+                f"Animation for '{node_name}' property '{property_name}' must have repeat >= 1"
+            )
+
         return AnimationTrack(
             node_name=node_name,
             property_name=property_name,
@@ -93,6 +103,7 @@ class TimelineEngine:
             end_value=normalize_value(animation["to"]),
             easing_name=easing_name,
             loop=loop,
+            repeat=repeat,
         )
 
 

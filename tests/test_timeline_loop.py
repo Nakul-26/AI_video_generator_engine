@@ -80,6 +80,75 @@ class TimelineLoopTests(unittest.TestCase):
 
         self.assertEqual(graph.find_node("fan").rotation, 180.0)
 
+    def test_repeat_replays_for_a_fixed_number_of_cycles(self) -> None:
+        graph = self._build_graph()
+        timeline = TimelineEngine(
+            graph,
+            [
+                {
+                    "node": "fan",
+                    "property": "rotation",
+                    "start_time": 0,
+                    "end_time": 1,
+                    "from": 0,
+                    "to": 90,
+                    "repeat": 3,
+                }
+            ],
+        )
+
+        timeline.evaluate(1.5)
+        self.assertEqual(graph.find_node("fan").rotation, 45.0)
+
+        timeline.evaluate(3.0)
+        self.assertEqual(graph.find_node("fan").rotation, 90.0)
+
+    def test_repeat_respects_delay_before_first_cycle(self) -> None:
+        graph = self._build_graph()
+        timeline = TimelineEngine(
+            graph,
+            [
+                {
+                    "node": "orb",
+                    "property": "position",
+                    "start_time": 0,
+                    "end_time": 2,
+                    "delay": 1.0,
+                    "from": [0, 90],
+                    "to": [240, 90],
+                    "repeat": 2,
+                }
+            ],
+        )
+
+        timeline.evaluate(0.75)
+        self.assertEqual(graph.find_node("orb").position, [0.0, 90.0])
+
+        timeline.evaluate(2.5)
+        self.assertEqual(graph.find_node("orb").position, [180.0, 90.0])
+
+        timeline.evaluate(5.0)
+        self.assertEqual(graph.find_node("orb").position, [240.0, 90.0])
+
+    def test_repeat_must_be_positive(self) -> None:
+        graph = self._build_graph()
+
+        with self.assertRaisesRegex(ValueError, "repeat >= 1"):
+            TimelineEngine(
+                graph,
+                [
+                    {
+                        "node": "fan",
+                        "property": "rotation",
+                        "start_time": 0,
+                        "end_time": 1,
+                        "from": 0,
+                        "to": 90,
+                        "repeat": 0,
+                    }
+                ],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

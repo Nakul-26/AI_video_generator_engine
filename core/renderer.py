@@ -11,18 +11,26 @@ from core.scene_node import SceneNode
 class Renderer:
     """Render a single frame from scene graph nodes."""
 
+    DRAWABLE_TYPES = {"text", "circle", "rectangle", "image"}
+
     def __init__(self, width: int, height: int, assets_dir: str | Path | None = None) -> None:
         self.width = width
         self.height = height
         self.assets_dir = Path(assets_dir) if assets_dir else None
         self._image_cache: dict[Path, np.ndarray] = {}
 
-    def render_scene(self, nodes: list[SceneNode]) -> np.ndarray:
+    def render_scene(self, nodes: list[SceneNode], camera: SceneNode | None = None) -> np.ndarray:
         frame = np.zeros((self.height, self.width, 3), dtype=np.uint8)
+        camera_position = camera.get_world_position() if camera else [0.0, 0.0]
+        camera_zoom = camera.zoom if camera else 1.0
         drawable_nodes = [
             node
             for node in nodes
-            if node.visible and node.node_type is not None and node.get_world_opacity() > 0
+            if (
+                node.visible
+                and node.node_type in self.DRAWABLE_TYPES
+                and node.get_world_opacity() > 0
+            )
         ]
         sorted_nodes = sorted(drawable_nodes, key=lambda node: node.layer)
 
@@ -30,33 +38,39 @@ class Renderer:
             obj_type = node.node_type
 
             if obj_type == "text":
-                overlay, mask = self._draw_text(node)
+                overlay, mask = self._draw_text(node, camera_position, camera_zoom)
             elif obj_type == "circle":
-                overlay, mask = self._draw_circle(node)
+                overlay, mask = self._draw_circle(node, camera_position, camera_zoom)
             elif obj_type == "rectangle":
-                overlay, mask = self._draw_rectangle(node)
+                overlay, mask = self._draw_rectangle(node, camera_position, camera_zoom)
             elif obj_type == "image":
-                overlay, mask = self._draw_image(node)
+                overlay, mask = self._draw_image(node, camera_position, camera_zoom)
             else:
                 raise ValueError(f"Unsupported object type: {obj_type}")
 
-            self._composite_node(frame, overlay, mask, node)
+            self._composite_node(frame, overlay, mask, node, camera_position, camera_zoom)
 
         return frame
 
-    def _draw_text(self, node: SceneNode) -> tuple[np.ndarray, np.ndarray]:
+    def _draw_text(
+        self,
+        node: SceneNode,
+        camera_position: list[float],
+        camera_zoom: float,
+    ) -> tuple[np.ndarray, np.ndarray]:
         overlay = np.zeros((self.height, self.width, 3), dtype=np.uint8)
         mask = np.zeros((self.height, self.width), dtype=np.uint8)
         obj = node.data
         color = tuple(obj.get("color", [255, 255, 255]))
         world_position = node.get_world_position()
         world_scale = node.get_world_scale()
-        scale = float(obj.get("font_scale", 1.0)) * world_scale[0]
+        screen_position = self._camera_position(world_position, camera_position, camera_zoom)
+        scale = float(obj.get("font_scale", 1.0)) * world_scale[0] * camera_zoom
         thickness = max(1, int(obj.get("thickness", 2)))
         cv2.putText(
             overlay,
             obj["value"],
-            (int(world_position[0]), int(world_position[1])),
+            (int(screen_position[0]), int(screen_position[1])),
             cv2.FONT_HERSHEY_SIMPLEX,
             scale,
             color,
@@ -66,7 +80,7 @@ class Renderer:
         cv2.putText(
             mask,
             obj["value"],
-            (int(world_position[0]), int(world_position[1])),
+            (int(screen_position[0]), int(screen_position[1])),
             cv2.FONT_HERSHEY_SIMPLEX,
             scale,
             255,
@@ -75,7 +89,12 @@ class Renderer:
         )
         return overlay, mask
 
-    def _draw_circle(self, node: SceneNode) -> tuple[np.ndarray, np.ndarray]:
+    def _draw_circle(
+        self,
+        node: SceneNode,
+        camera_position: list[float],
+        camera_zoom: float,
+    ) -> tuple[np.ndarray, np.ndarray]:
         overlay = np.zeros((self.height, self.width, 3), dtype=np.uint8)
         mask = np.zeros((self.height, self.width), dtype=np.uint8)
         obj = node.data
@@ -83,24 +102,30 @@ class Renderer:
         thickness = int(obj.get("thickness", -1))
         world_position = node.get_world_position()
         world_scale = node.get_world_scale()
-        radius = max(1, int(float(obj["radius"]) * world_scale[0]))
+        screen_position = self._camera_position(world_position, camera_position, camera_zoom)
+        radius = max(1, int(float(obj["radius"]) * world_scale[0] * camera_zoom))
         cv2.circle(
             overlay,
-            (int(world_position[0]), int(world_position[1])),
+            (int(screen_position[0]), int(screen_position[1])),
             radius,
             color,
             thickness,
         )
         cv2.circle(
             mask,
-            (int(world_position[0]), int(world_position[1])),
+            (int(screen_position[0]), int(screen_position[1])),
             radius,
             255,
             thickness,
         )
         return overlay, mask
 
-    def _draw_rectangle(self, node: SceneNode) -> tuple[np.ndarray, np.ndarray]:
+    def _draw_rectangle(
+        self,
+        node: SceneNode,
+        camera_position: list[float],
+        camera_zoom: float,
+    ) -> tuple[np.ndarray, np.ndarray]:
         overlay = np.zeros((self.height, self.width, 3), dtype=np.uint8)
         mask = np.zeros((self.height, self.width), dtype=np.uint8)
         obj = node.data
@@ -108,31 +133,38 @@ class Renderer:
         thickness = int(obj.get("thickness", -1))
         world_position = node.get_world_position()
         world_scale = node.get_world_scale()
-        x = int(world_position[0])
-        y = int(world_position[1])
-        width = max(1, int(float(obj["width"]) * world_scale[0]))
-        height = max(1, int(float(obj["height"]) * world_scale[1]))
+        screen_position = self._camera_position(world_position, camera_position, camera_zoom)
+        x = int(screen_position[0])
+        y = int(screen_position[1])
+        width = max(1, int(float(obj["width"]) * world_scale[0] * camera_zoom))
+        height = max(1, int(float(obj["height"]) * world_scale[1] * camera_zoom))
         cv2.rectangle(overlay, (x, y), (x + width, y + height), color, thickness)
         cv2.rectangle(mask, (x, y), (x + width, y + height), 255, thickness)
         return overlay, mask
 
-    def _draw_image(self, node: SceneNode) -> tuple[np.ndarray, np.ndarray]:
+    def _draw_image(
+        self,
+        node: SceneNode,
+        camera_position: list[float],
+        camera_zoom: float,
+    ) -> tuple[np.ndarray, np.ndarray]:
         overlay = np.zeros((self.height, self.width, 3), dtype=np.uint8)
         mask = np.zeros((self.height, self.width), dtype=np.uint8)
         obj = node.data
         image = self._load_image(obj["path"])
         world_position = node.get_world_position()
         world_scale = node.get_world_scale()
-        x = int(world_position[0])
-        y = int(world_position[1])
+        screen_position = self._camera_position(world_position, camera_position, camera_zoom)
+        x = int(screen_position[0])
+        y = int(screen_position[1])
 
         if "width" in obj and "height" in obj:
-            target_width = max(1, int(float(obj["width"]) * world_scale[0]))
-            target_height = max(1, int(float(obj["height"]) * world_scale[1]))
+            target_width = max(1, int(float(obj["width"]) * world_scale[0] * camera_zoom))
+            target_height = max(1, int(float(obj["height"]) * world_scale[1] * camera_zoom))
             image = cv2.resize(image, (target_width, target_height))
-        elif world_scale != [1.0, 1.0]:
-            target_width = max(1, int(image.shape[1] * world_scale[0]))
-            target_height = max(1, int(image.shape[0] * world_scale[1]))
+        elif world_scale != [1.0, 1.0] or camera_zoom != 1.0:
+            target_width = max(1, int(image.shape[1] * world_scale[0] * camera_zoom))
+            target_height = max(1, int(image.shape[0] * world_scale[1] * camera_zoom))
             image = cv2.resize(image, (target_width, target_height))
 
         img_h, img_w = image.shape[:2]
@@ -158,8 +190,16 @@ class Renderer:
         overlay: np.ndarray,
         mask: np.ndarray,
         node: SceneNode,
+        camera_position: list[float],
+        camera_zoom: float,
     ) -> None:
-        rotated_overlay, rotated_mask = self._apply_rotation(overlay, mask, node)
+        rotated_overlay, rotated_mask = self._apply_rotation(
+            overlay,
+            mask,
+            node,
+            camera_position,
+            camera_zoom,
+        )
         alpha = (rotated_mask.astype(np.float32) / 255.0) * node.get_world_opacity()
         if not np.any(alpha):
             return
@@ -176,12 +216,14 @@ class Renderer:
         overlay: np.ndarray,
         mask: np.ndarray,
         node: SceneNode,
+        camera_position: list[float],
+        camera_zoom: float,
     ) -> tuple[np.ndarray, np.ndarray]:
         rotation = node.get_world_rotation()
         if rotation == 0:
             return overlay, mask
 
-        center = self._rotation_center(node)
+        center = self._rotation_center(node, camera_position, camera_zoom)
         matrix = cv2.getRotationMatrix2D(center, rotation, 1.0)
         rotated_overlay = cv2.warpAffine(
             overlay,
@@ -201,27 +243,44 @@ class Renderer:
         )
         return rotated_overlay, rotated_mask
 
-    def _rotation_center(self, node: SceneNode) -> tuple[float, float]:
+    def _rotation_center(
+        self,
+        node: SceneNode,
+        camera_position: list[float],
+        camera_zoom: float,
+    ) -> tuple[float, float]:
         world_position = node.get_world_position()
         world_scale = node.get_world_scale()
         obj = node.data
+        screen_position = self._camera_position(world_position, camera_position, camera_zoom)
 
         if node.node_type == "rectangle":
-            width = float(obj["width"]) * world_scale[0]
-            height = float(obj["height"]) * world_scale[1]
-            return (world_position[0] + width / 2.0, world_position[1] + height / 2.0)
+            width = float(obj["width"]) * world_scale[0] * camera_zoom
+            height = float(obj["height"]) * world_scale[1] * camera_zoom
+            return (screen_position[0] + width / 2.0, screen_position[1] + height / 2.0)
 
         if node.node_type == "image":
             if "width" in obj and "height" in obj:
-                width = float(obj["width"]) * world_scale[0]
-                height = float(obj["height"]) * world_scale[1]
+                width = float(obj["width"]) * world_scale[0] * camera_zoom
+                height = float(obj["height"]) * world_scale[1] * camera_zoom
             else:
                 image = self._load_image(obj["path"])
-                width = image.shape[1] * world_scale[0]
-                height = image.shape[0] * world_scale[1]
-            return (world_position[0] + width / 2.0, world_position[1] + height / 2.0)
+                width = image.shape[1] * world_scale[0] * camera_zoom
+                height = image.shape[0] * world_scale[1] * camera_zoom
+            return (screen_position[0] + width / 2.0, screen_position[1] + height / 2.0)
 
-        return (world_position[0], world_position[1])
+        return (screen_position[0], screen_position[1])
+
+    @staticmethod
+    def _camera_position(
+        world_position: list[float],
+        camera_position: list[float],
+        camera_zoom: float,
+    ) -> tuple[float, float]:
+        return (
+            (world_position[0] - camera_position[0]) * camera_zoom,
+            (world_position[1] - camera_position[1]) * camera_zoom,
+        )
 
     def _load_image(self, image_path: str) -> np.ndarray:
         path = Path(image_path)

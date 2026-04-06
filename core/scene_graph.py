@@ -30,6 +30,9 @@ class SceneGraph:
         except KeyError as exc:
             raise KeyError(f"Scene node '{name}' was not found") from exc
 
+    def get_node(self, name: str) -> SceneNode | None:
+        return self.nodes_by_name.get(name)
+
     def reset_runtime_state(self) -> None:
         self.root.reset_runtime_state()
 

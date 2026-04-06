@@ -20,12 +20,14 @@ class SceneNode:
         self.base_scale = self._normalize_pair(self.data.get("scale", [1, 1]), default=1.0)
         self.base_rotation = float(self.data.get("rotation", 0))
         self.base_opacity = self._normalize_scalar(self.data.get("opacity", 1.0), default=1.0)
+        self.base_zoom = self._normalize_scalar(self.data.get("zoom", 1.0), default=1.0)
         self.layer = int(self.data.get("layer", 0))
         self.visible = bool(self.data.get("visible", True))
         self.position = list(self.base_position)
         self.scale = list(self.base_scale)
         self.rotation = self.base_rotation
         self.opacity = self.base_opacity
+        self.zoom = self.base_zoom
 
     def add_child(self, node: SceneNode) -> None:
         node.parent = self
@@ -36,6 +38,7 @@ class SceneNode:
         self.scale = list(self.base_scale)
         self.rotation = self.base_rotation
         self.opacity = self.base_opacity
+        self.zoom = self.base_zoom
 
         for child in self.children:
             child.reset_runtime_state()
@@ -55,6 +58,10 @@ class SceneNode:
 
         if property_name == "opacity":
             self.opacity = min(1.0, max(0.0, self._normalize_scalar(value, default=1.0)))
+            return
+
+        if property_name == "zoom":
+            self.zoom = max(0.0, self._normalize_scalar(value, default=1.0))
             return
 
         raise ValueError(f"Unsupported animated property: {property_name}")

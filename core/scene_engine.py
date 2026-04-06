@@ -41,10 +41,13 @@ class SceneEngine:
                 scene_graph = self.build_graph(scene.get("objects", []))
                 timeline = TimelineEngine(scene_graph, scene.get("animations", []))
                 nodes = scene_graph.traverse()
+                camera_node = scene_graph.get_node("camera")
+                if camera_node is None:
+                    camera_node = SceneNode("camera", {"type": "camera", "zoom": 1.0})
                 for frame_index in range(frame_count):
                     current_time = frame_index / self.fps
                     timeline.evaluate(current_time)
-                    frame = self.renderer.render_scene(nodes)
+                    frame = self.renderer.render_scene(nodes, camera=camera_node)
                     video.write(frame)
         finally:
             video.release()

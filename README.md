@@ -19,6 +19,7 @@ A small Python-based scene engine that renders JSON-defined scenes into an MP4 v
   - `scale`
   - `rotation`
   - `opacity`
+  - `zoom`
 - Supported easing types:
   - `linear`
   - `ease_in`
@@ -34,7 +35,9 @@ A small Python-based scene engine that renders JSON-defined scenes into an MP4 v
 - Rotation-aware compositing
 - Relative asset loading from the `assets/` directory
 - Image caching during rendering
+- Basic camera support with animatable `x`, `y`, and `zoom`
 - Basic validation for duplicate node names, missing nodes, and invalid animation ranges
+- Automated unit tests for timeline and camera behavior
 
 ## Project Structure
 
@@ -98,7 +101,7 @@ Each scene supports:
 Common node fields:
 
 - `name`: unique node name
-- `type`: one of `text`, `circle`, `rectangle`, `image`
+- `type`: one of `text`, `circle`, `rectangle`, `image`, `camera`
 - `x`, `y`: local position
 - `scale`: scalar or `[x, y]`
 - `rotation`: degrees
@@ -106,6 +109,7 @@ Common node fields:
 - `layer`: draw order
 - `visible`: `true` or `false`
 - `children`: nested child nodes
+- `zoom`: camera-only scalar, defaults to `1.0`
 
 Type-specific fields:
 
@@ -119,7 +123,7 @@ Type-specific fields:
 Each animation track includes:
 
 - `node`: target node name
-- `property`: `position`, `scale`, `rotation`, or `opacity`
+- `property`: `position`, `scale`, `rotation`, `opacity`, or `zoom`
 - `start_time`: animation start time in seconds
 - `end_time`: animation end time in seconds
 - `delay`: optional start offset in seconds, defaults to `0`
@@ -137,6 +141,7 @@ The sample scene currently demonstrates:
 - text fade-in using eased opacity animation
 - delayed circle position animation with easing
 - delayed rectangle rotation animation with easing
+- camera zoom from `1.0` to `2.0` on a centered circle
 - looped animation tracks for continuous motion
 - repeated animation tracks for shake, pulse, and bounce-style motion
 - multi-scene sequencing in one output video
@@ -147,10 +152,8 @@ Not implemented yet:
 
 - audio support
 - easing curves beyond the built-in presets
-- camera system
 - transitions between scenes
 - CLI arguments for choosing input/output paths
-- automated tests
 - richer documentation and examples
 
 ## Notes

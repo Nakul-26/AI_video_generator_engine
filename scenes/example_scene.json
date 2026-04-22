@@ -128,6 +128,38 @@
           "easing": "ease_in"
         }
       ]
+    },
+    {
+      "duration": 3,
+      "objects": [
+        {
+          "name": "camera",
+          "type": "camera",
+          "x": 0,
+          "y": 0,
+          "zoom": 1
+        },
+        {
+          "name": "focus_circle",
+          "type": "circle",
+          "x": 640,
+          "y": 360,
+          "radius": 120,
+          "color": [80, 220, 255],
+          "layer": 5
+        }
+      ],
+      "animations": [
+        {
+          "node": "camera",
+          "property": "zoom",
+          "start_time": 0,
+          "end_time": 3,
+          "from": 1,
+          "to": 2,
+          "easing": "ease_in_out"
+        }
+      ]
     }
   ]
 }
